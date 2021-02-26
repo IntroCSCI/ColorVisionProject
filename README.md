@@ -4,6 +4,15 @@
 
 !!!Replace with a description of what your program does!!!
 
+### v0.2 Updates
+
+*Coming soon*
+
+### v1.0 Updates
+
+*Coming soon*
+
+
 ## Developer
 
 !!!Replace with your name!!!
@@ -13,7 +22,7 @@
 To run the program, give the following commands:
 
 ```
-g++ --std=c++11 main.cpp -o cvp
+g++ --std=c++11 *.cpp -o cvp
 ./cvp
 ```
 
@@ -29,7 +38,7 @@ Here is an example of the program running:
 
 !!!Replace with a summary and examples of how multiple variables have been used with a variety of data types and why they have been used effectively and appropriately!!!
 
-### Input and Output
+### Console Input and Output
 
 !!!Replace with a summary and examples of how input and output have been used effectively and appropriately!!!
 
@@ -44,3 +53,15 @@ Here is an example of the program running:
 ### File Input and Output
 
 !!!Replace with a summary and examples of how input and/or output of files have been used effectively and appropriately!!!
+
+### Arrays/Vectors
+
+*Coming in version 0.2*
+
+### Functions
+
+*Coming in version 0.2*
+
+### Classes
+
+*Coming in version 1.0*
