@@ -17,15 +17,16 @@ int main() {
     // Two dimensional array that can store 2 rows of 3 columns containing RGB color values
     // Allows use of a for loop to reuse the input logic with flexible pointers
 
-    cout << "\nRGB colors must be three integers separated by whitespaces and between 0-255.\n"
-                "HEX colors must be in six digit format (optionally with '#' or '0x' prefixes).\n"
-                "Examples: '157 34 53', '0 0 0', '0x9D2235', '#75787b'\n";
+    cout << "\nThis program will evaluate two colors based on WCAG 2.x.\n"
+            "RGB colors must be three integers separated by whitespaces and between 0-255.\n"
+            "HEX colors must be in six digit format (optionally with '#' or '0x' prefixes).\n"
+            "Examples: '157 34 53', '0 0 0', '0x9D2235', '#75787b'\n\n";
 
     for (int i = 0; i < 2; i++) {
         bool valid_color_format = false;
 
         do {
-            cout << "\nEnter color values in RGB or HEX format for Color " << i+1 << " of 2:\n";
+            cout << "Enter color values in RGB or HEX format for Color " << i+1 << " of 2:\n";
 
             string color_input;
             int format_base = 0;
@@ -78,9 +79,9 @@ int main() {
     if (contrast_score >= 7.0) {
         cout << "\nThese colors have a high amount of contrast.\n";
     } else if (contrast_score >= 3.0 && contrast_score < 7.0) {
-        cout << "\nThese colors have a good amount of contrast.\n";
+        cout << "\nThese colors have a decent amount of contrast.\n";
     } else { //contrast score < 3.0
-        cout << "\nThese colors don't have a lot of contrast. You should pick some better colors.\n";
+        cout << "\nThese colors have very low contrast. (You should pick some better colors.)\n";
     }
     
     return 0;
@@ -237,7 +238,6 @@ bool rgb_validator(const string color_input, int& red, int& green, int& blue) {
 }
 
 double contrast_calculator(int rgb_colors[2][3]) {
-    // cout << "[DEBUG] Now beginning color contrast calculation...\n";
 
     double srgb_colors[2][4] = {0};
     rgb_to_srgb(rgb_colors, srgb_colors);
@@ -245,8 +245,8 @@ double contrast_calculator(int rgb_colors[2][3]) {
     for (int i = 0; i < 2; i++) {
         srgb_colors[i][3] = (srgb_colors[i][0] * 0.2126) + (srgb_colors[i][1] * 0.7152) + (srgb_colors[i][2] * 0.0722);
     }
-    double color_contrast = (max(srgb_colors[0][3], srgb_colors[1][3]) + 0.05) / (min(srgb_colors[0][3], srgb_colors[1][3]) + 0.05);
 
+    double color_contrast = (max(srgb_colors[0][3], srgb_colors[1][3]) + 0.05) / (min(srgb_colors[0][3], srgb_colors[1][3]) + 0.05);
     return color_contrast;
 }
 
