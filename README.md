@@ -4,9 +4,12 @@
 
 ## Description
 
-### **Version 1.3**
+### **Version 1.4**
 
-This program compares two RGB colors to determine a basic measurement of contrast and resulting visibility.
+This program compares two colors to determine a measurement of contrast and evaluate it according to WCAG 2.x standards.
+
+### New in v1.4:
+ - Replaced basic contrast calculation with a more advanced version to calculate contrast using luminance-normalized colors; based on WCAG 2.x.
 
 ### New in v1.3:
  - Support for HEX input!
@@ -15,9 +18,25 @@ This program compares two RGB colors to determine a basic measurement of contras
  - MISC fixes.
 
 ### To be added in v2.x:
- - _TBD_
+ - Support for color blindness conditions evaluation.
 
 ## Example Output:
 ```
- \\ To be added before v2.0 release; requires scope freeze.
+This program will evaluate two colors based on WCAG 2.x.
+RGB colors must be three integers separated by whitespaces and between 0-255.
+HEX colors must be in six digit format (optionally with '#' or '0x' prefixes).
+Examples: '157 34 53', '0 0 0', '0x9D2235', '#75787b'
+
+Enter color values in RGB or HEX format for Color 1 of 2:
+123 4 255
+
+Enter color values in RGB or HEX format for Color 2 of 2:
+255 255 255
+
+You have selected the following colors: 123 4 255 and 255 255 255
+Contrast Ratio: 6.35678:1
+
+These colors have a decent amount of contrast.
+
+Process finished with exit code 0
 ```
