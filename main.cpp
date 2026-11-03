@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <sstream>
 #include <cmath>
+#include <ctime>
 
 using namespace std;
 
@@ -14,6 +15,7 @@ bool rgb_validator(string color_input, int& red, int& green, int& blue);
 string hex_to_dec(string color_input);
 double contrast_calculator(int rgb_colors[2][3]);
 void rgb_to_srgb(const int rgb_colors[2][3], double (&srgb_colors)[2][4]);
+void output_report (const bool file_io, const int rgb_colors[2][3], double contrast_score);
 
 int main() {
     // Two dimensional array that can store 2 rows of 3 columns containing RGB color values
@@ -22,9 +24,6 @@ int main() {
     bool file_io;
     ifstream user_color_file; // Creates file object but does not open anything
     filesystem::path file_path ("../colors.txt");
-    //cout << filesystem::current_path() << endl;
-    //cout << file_path;
-
 
     cout << "\nThis program will evaluate two colors based on WCAG 2.x.\n";
 
@@ -106,6 +105,7 @@ int main() {
 
     if (file_io) {
         user_color_file.close();
+        output_report(file_io, rgb_colors, contrast_score);
     }
     return 0;
 }
@@ -114,12 +114,12 @@ bool file_preflight(bool& file_io, const filesystem::path& file_path) {
     char io_choice = 'X'; // initialized to an invalid choice to keep loop running
 
     do {
-        cout << "Will you read your colors from a file [Y/N]?\n"
-                "Colors must be entered in a text document named 'colors.txt' in the root directory.\n"
-                "Currently, only the first two colors found will be read from the file due to budget cuts." << endl;
+        cout << "Will you read your colors from a file [Y/N]?\n";
         cin >> io_choice;
         if (io_choice == 'Y' || io_choice == 'y') {
             file_io = true;
+            cout << "Colors must be entered in a text document named 'colors.txt' in the root directory.\n"
+                "Currently, only the first two colors found will be read from the file due to budget cuts." << endl;
         } else if (io_choice == 'N' || io_choice == 'n') {
             file_io = false;
             return false;
@@ -129,7 +129,7 @@ bool file_preflight(bool& file_io, const filesystem::path& file_path) {
     } while (io_choice == 'X');
 
     /*
-    // save custom paths for later
+    // save custom paths for 1.7.x
     if (file_io) {
         io_choice = 'X';
         filesystem::path user_file_path;
@@ -349,4 +349,40 @@ void rgb_to_srgb(const int rgb_colors[2][3], double (&srgb_colors)[2][4]) {
             }
         }
     }
+}
+
+void output_report (const bool file_io, const int rgb_colors[2][3], double contrast_score) {
+    filesystem::path report_path("../report.txt");
+    ofstream report(report_path);
+
+    // Create correct header
+    if (!filesystem::exists(report_path)) { // Check if file exists
+        report << string(50,'=') << "\n   CSCI-111 Color Vision Project Output Report   \n" << string(50,'=') << "\n\n";
+    } else {
+        if (filesystem::file_size(report_path) != 0) { // Check if file is not empty
+            report << "\n\n";
+        } else {
+            report << string(50,'=') << "\n   CSCI-111 Color Vision Project Output Report   \n" << string(50,'=') << "\n\n";
+        }
+    }
+
+    time_t timestamp;
+    time(&timestamp);
+    report << "Report generated at: " << ctime(&timestamp) << "\n";
+
+    if (file_io) {
+        report << "Input method: FILE\n";
+    } else {
+        report << "Input method: CLI\n";
+    }
+
+    report << "Colors evaluated (RGB): "
+        << rgb_colors[0][0] << " " << rgb_colors[0][1] << " " << rgb_colors[0][2] << " and "
+        << rgb_colors[1][0] << " " << rgb_colors[1][1] << " " << rgb_colors[1][2] << "\n";
+
+    report << "Contrast evaluation: " << contrast_score << ":1\n";
+    //report << "(Contrast ratios range from 1:1 to 21:1, higher ratios indicate higher contrast and generally better visibility.)\n\n";
+
+    cout << "A report has been generated at " << report_path << endl;
+    report.close();
 }
