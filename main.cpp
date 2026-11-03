@@ -1,42 +1,60 @@
 // Author: Jaz Salazar
 // See dev branch for additional documentation.
 #include <iostream>
+#include <fstream>
+#include <filesystem>
 #include <sstream>
 #include <cmath>
 
 using namespace std;
 
-bool rgb_validator(string color_input, int& red, int& green, int& blue);
+bool file_preflight(bool& file_io, const filesystem::path& file_path);
 bool input_preflight(string& color_input, int& format_base);
+bool rgb_validator(string color_input, int& red, int& green, int& blue);
 string hex_to_dec(string color_input);
 double contrast_calculator(int rgb_colors[2][3]);
 void rgb_to_srgb(const int rgb_colors[2][3], double (&srgb_colors)[2][4]);
 
 int main() {
-    int rgb_colors[2][3] = {0};
     // Two dimensional array that can store 2 rows of 3 columns containing RGB color values
     // Allows use of a for loop to reuse the input logic with flexible pointers
+    int rgb_colors[2][3] = {0}; // All values initialized to 0 to prevent potential references to corrupted data
+    bool file_io;
+    ifstream user_color_file; // Creates file object but does not open anything
+    filesystem::path file_path ("../colors.txt");
+    //cout << filesystem::current_path() << endl;
+    //cout << file_path;
 
-    cout << "\nThis program will evaluate two colors based on WCAG 2.x.\n"
-            "RGB colors must be three integers separated by whitespaces and between 0-255.\n"
+
+    cout << "\nThis program will evaluate two colors based on WCAG 2.x.\n";
+
+    if (file_preflight(file_io, file_path)) {
+        user_color_file.open(file_path);
+    } else {
+        cout << "RGB colors must be three integers separated by whitespaces and between 0-255.\n"
             "HEX colors must be in six digit format (optionally with '#' or '0x' prefixes).\n"
             "Examples: '157 34 53', '0 0 0', '0x9D2235', '#75787b'\n\n";
+    }
 
     for (int i = 0; i < 2; i++) {
         bool valid_color_format = false;
 
         do {
-            cout << "Enter color values in RGB or HEX format for Color " << i+1 << " of 2:\n";
-
             string color_input;
-            int format_base = 0;
+            int format_base = 0; // initialized here so that it's reset with each loop
 
-            getline(cin, color_input);
+            if (file_io) {
+                getline(user_color_file, color_input);
+                cout << "Read color '" << color_input << "' from file " << file_path << ".\n" << endl;
+
+            } else {
+                cout << "Enter color values in RGB or HEX format for Color " << i+1 << " of 2:\n";
+                getline(cin, color_input);
+                // if (!cin) {return 1}
+            }
 
             if (!input_preflight(color_input,format_base)) {
-                cout << "Invalid input. Try again.\n";
-                cout << "Examples of valid input: '157 34 53', '0 0 0', '0x9D2235', '#75787B'\n";
-                continue;
+                goto bad_input; // be careful with goto, I think it works ok here
             }
 
             if (format_base == 16) {
@@ -57,12 +75,14 @@ int main() {
                     );
             } else {
                 cout << "ERROR: Input format could not be determined!\n";
-                // cout << "[DEBUG] The value of 'input_base' is invalid.\n";
-                return -1;
+                cout << "[DEBUG] The value of 'input_base' is invalid.\n";
+                exit(2);
             }
 
+            // label pointer used to skip validation if input fails basic checks
+            bad_input:
             if (!valid_color_format) {
-                cout << "Invalid color format. Please try again.\n";
+                cout << "\nInvalid input. Please try again.\n";
                 cout << "Examples of valid input: '157 34 53', '0 0 0', '0x9D2235', '#75787B'\n";
             }
         } while (!valid_color_format);
@@ -77,15 +97,75 @@ int main() {
     // contrast score goes from 1 - 21
 
     if (contrast_score >= 7.0) {
-        cout << "\nThese colors have a high amount of contrast.\n";
+        cout << "\nThese colors have a good amount of contrast.\n";
     } else if (contrast_score >= 3.0 && contrast_score < 7.0) {
         cout << "\nThese colors have a decent amount of contrast.\n";
     } else { //contrast score < 3.0
-        cout << "\nThese colors have very low contrast. (You should pick some better colors.)\n";
+        cout << "\nThese colors have very low contrast. You should pick some better colors.\n";
     }
-    
+
+    if (file_io) {
+        user_color_file.close();
+    }
     return 0;
 }
+
+bool file_preflight(bool& file_io, const filesystem::path& file_path) {
+    char io_choice = 'X'; // initialized to an invalid choice to keep loop running
+
+    do {
+        cout << "Will you read your colors from a file [Y/N]?\n"
+                "Colors must be entered in a text document named 'colors.txt' in the root directory.\n"
+                "Currently, only the first two colors found will be read from the file due to budget cuts." << endl;
+        cin >> io_choice;
+        if (io_choice == 'Y' || io_choice == 'y') {
+            file_io = true;
+        } else if (io_choice == 'N' || io_choice == 'n') {
+            file_io = false;
+            return false;
+        } else {
+            cout << "Please make a valid choice ['Y' or 'N'].\n";
+        }
+    } while (io_choice == 'X');
+
+    /*
+    // save custom paths for later
+    if (file_io) {
+        io_choice = 'X';
+        filesystem::path user_file_path;
+
+        cout << "Is your file located at " << file_path << " [Y/N]?\n";
+        if (io_choice == 'N' || io_choice == 'n') {
+            while (file_path.empty() || file_path == "\"../colors.txt\"") {
+                cin >> user_file_path;
+            }
+            user_file_path = file_path;
+        } else if (io_choice == 'Y' || io_choice == 'y') {
+            return true;
+        } else {
+            cout << "Please make a valid choice ['Y' or 'N'].\n";
+        }
+    }
+    */
+
+    if (file_io) {
+
+        if (!filesystem::exists(file_path)) { // Check if file exists
+            cout << "ERROR: A readable file was not found at  " << file_path << "!\n";
+            return false;
+        }
+
+        if (filesystem::file_size(file_path) == 0) { // Check if file is not empty
+            cout << "ERROR: The file found at " << file_path << " contains no data!\n ";
+            return false;
+        }
+
+        return true;
+    } else {
+        return false;
+    }
+}
+
 
 bool input_preflight(string& color_input, int& format_base) {
 
@@ -181,13 +261,17 @@ string hex_to_dec(const string color_input) {
         for (int j = 1, base = 1; j >= 0; j--, base += 15) {
             int digit = 0;
 
-            // I don't really understand this part.
-            // How does C++ understand the numeric equivalent of the alphabetical characters?
+
+            // HEX input was already converted to uppercase alphanumeric in 'preflight' btw
             if (hex_val[j] >= '0' && hex_val[j] <= '9') {
+                // Comparison works bc C++ compares ASCII codes, which are sequential
                 digit = hex_val[j] - '0';
+                // ASCII character codes are offset by 48, which corresponds to the character '0'
+                // Subtracting the ASCII character code offset gives the numerical integer value
             } else if (hex_val[j] >= 'A' && hex_val[j] <= 'F') {
                 digit = hex_val[j] - 'A' + 10;
-                // HEX input was already converted to uppercase alphanumeric in 'preflight' btw
+                // Subtracts offset of 65 for 'A' and corrects offset to 55
+                // Easier to figure out than `digit = hex_val[j] - '7'`
             }
             dec_val += digit * base;
         }
@@ -229,7 +313,6 @@ bool rgb_validator(const string color_input, int& red, int& green, int& blue) {
         return false;
     }
 
-    // Store values AFTER all preconditions pass.
     red = r;
     green = g;
     blue = b;
@@ -237,11 +320,13 @@ bool rgb_validator(const string color_input, int& red, int& green, int& blue) {
     return true;
 }
 
+// See WCAG 2.x for source
 double contrast_calculator(int rgb_colors[2][3]) {
 
     double srgb_colors[2][4] = {0};
     rgb_to_srgb(rgb_colors, srgb_colors);
 
+    // Calculates relative luminance for each color
     for (int i = 0; i < 2; i++) {
         srgb_colors[i][3] = (srgb_colors[i][0] * 0.2126) + (srgb_colors[i][1] * 0.7152) + (srgb_colors[i][2] * 0.0722);
     }
@@ -250,6 +335,7 @@ double contrast_calculator(int rgb_colors[2][3]) {
     return color_contrast;
 }
 
+// See WCAG 2.x for source
 void rgb_to_srgb(const int rgb_colors[2][3], double (&srgb_colors)[2][4]) {
     // i = the individual color entered by the user --> Color 1 or Color 2
     // j = the channel of the individual color, i --> Red (0), Green (1), or Blue (2)
