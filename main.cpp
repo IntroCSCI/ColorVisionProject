@@ -15,20 +15,25 @@ bool rgb_validator(string color_input, int& red, int& green, int& blue);
 string hex_to_dec(string color_input);
 double contrast_calculator(int rgb_colors[2][3]);
 void rgb_to_srgb(const int rgb_colors[2][3], double (&srgb_colors)[2][4]);
-void output_report (const bool file_io, const int rgb_colors[2][3], double contrast_score);
+void output_report (bool file_io, const int rgb_colors[2][3], double contrast_score);
+
+constexpr double WCAG_AAA = 7.0;
+constexpr double WCAG_AA = 4.5;
+constexpr int BASE_DEC = 10;
+constexpr int BASE_HEX = 16;
+const filesystem::path DEFAULT_FILE_PATH ("../colors.txt");
 
 int main() {
-    // Two dimensional array that can store 2 rows of 3 columns containing RGB color values
+    // Two-dimensional array that can store 2 rows of 3 columns containing RGB color values
     // Allows use of a for loop to reuse the input logic with flexible pointers
     int rgb_colors[2][3] = {0}; // All values initialized to 0 to prevent potential references to corrupted data
     bool file_io;
-    ifstream user_color_file; // Creates file object but does not open anything
-    filesystem::path file_path ("../colors.txt");
+    ifstream user_color_file; // Creates file object but does not open anything until user specifies desire for file io
 
     cout << "\nThis program will evaluate two colors based on WCAG 2.x.\n";
 
-    if (file_preflight(file_io, file_path)) {
-        user_color_file.open(file_path);
+    if (file_preflight(file_io, DEFAULT_FILE_PATH)) {
+        user_color_file.open(DEFAULT_FILE_PATH);
     } else {
         cout << "RGB colors must be three integers separated by whitespaces and between 0-255.\n"
             "HEX colors must be in six digit format (optionally with '#' or '0x' prefixes).\n"
@@ -44,7 +49,7 @@ int main() {
 
             if (file_io) {
                 getline(user_color_file, color_input);
-                cout << "Read color '" << color_input << "' from file " << file_path << ".\n" << endl;
+                cout << "Read color '" << color_input << "' from file " << DEFAULT_FILE_PATH << ".\n" << endl;
 
             } else {
                 cout << "Enter color values in RGB or HEX format for Color " << i+1 << " of 2:\n";
@@ -56,7 +61,7 @@ int main() {
                 goto bad_input; // be careful with goto, I think it works ok here
             }
 
-            if (format_base == 16) {
+            if (format_base == BASE_HEX) {
                 // cout << "[DEBUG] Format confirmed as HEX. Proceeding to convert HEX --> DEC.\n";
                 string hex_converted = hex_to_dec(color_input);
                 // cout << "[DEBUG] Converted HEX --> DEC. Proceeding to verify converted RGB format.\n";
@@ -65,7 +70,7 @@ int main() {
                 rgb_colors[i][1],
                 rgb_colors[i][2]
                 );
-            } else if (format_base == 10) {
+            } else if (format_base == BASE_DEC) {
                 // cout << "[DEBUG] Format confirmed as DEC. Proceeding to verify RGB format.\n";
                 valid_color_format = rgb_validator(color_input,
                     rgb_colors[i][0],
@@ -93,11 +98,11 @@ int main() {
 
     double contrast_score = contrast_calculator(rgb_colors);
     cout << "Contrast Ratio: " << contrast_score << ":1\n";
-    // contrast score goes from 1 - 21
+    // contrast score goes from 1:1 to 21:1
 
-    if (contrast_score >= 7.0) {
+    if (contrast_score >= WCAG_AAA) { // contrast greater than 7:1
         cout << "\nThese colors have a good amount of contrast.\n";
-    } else if (contrast_score >= 3.0 && contrast_score < 7.0) {
+    } else if (contrast_score >= WCAG_AA && contrast_score < WCAG_AAA) { // contrast between 4.5:1 & 7:1
         cout << "\nThese colors have a decent amount of contrast.\n";
     } else { //contrast score < 3.0
         cout << "\nThese colors have very low contrast. You should pick some better colors.\n";
@@ -111,6 +116,7 @@ int main() {
 }
 
 bool file_preflight(bool& file_io, const filesystem::path& file_path) {
+    // file_path = DEFAULT_FILE_PATH (for now)
     char io_choice = 'X'; // initialized to an invalid choice to keep loop running
 
     do {
@@ -186,7 +192,7 @@ bool input_preflight(string& color_input, int& format_base) {
     }
 
     // check if string is long enough to hold a minimum valid RGB triad or HEX string
-    // HEX has to have at at least 6 chars, DEC could technically fit in 5 chars
+    // HEX has to have at least 6 chars, DEC could technically fit in 5 chars
     if (color_input.size() < 5) {
         // cout << "[DEBUG] ERROR: User input stream is too short!\nReason: User did not input a valid HEX or RGB color.";
         return false;
@@ -223,7 +229,7 @@ bool input_preflight(string& color_input, int& format_base) {
         for (char& c : color_input) {
             c = (char)toupper(c);
         }
-        format_base = 16; // already checked above. applying the base confirmation here to skip DEC if needed
+        format_base = BASE_HEX; // already checked above. applying the base confirmation here to skip DEC if needed
         // cout << "[DEBUG] HEX conversion to uppercase succeeded!\n";
     }
     else {
@@ -236,7 +242,7 @@ bool input_preflight(string& color_input, int& format_base) {
         }
         // cout << "[DEBUG] DEC checks passed!\n";
         // cout << "[DEBUG] User input verified as DEC!\n";
-        format_base = 10;
+        format_base = BASE_DEC;
         // if it's not HEX and all chars are valid (not counting syntax), then it must be DEC
     }
     return true;
@@ -300,9 +306,9 @@ bool rgb_validator(const string color_input, int& red, int& green, int& blue) {
         return false;
     }
 
-    // Reject values outside of 0-255
+    // Reject values outside 0-255
     if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
-        // cout << "[DEBUG] RGB range checks failed!\nReason: At least 1 integer value(s) were outside of the 0-255 range.\n";
+        // cout << "[DEBUG] RGB range checks failed!\nReason: At least 1 integer value(s) were outside the 0-255 range.\n";
         return false;
     }
 
@@ -316,7 +322,7 @@ bool rgb_validator(const string color_input, int& red, int& green, int& blue) {
     red = r;
     green = g;
     blue = b;
-    // cout << "[DEBUG] RGB validation completed sucessfully!\n";
+    // cout << "[DEBUG] RGB validation completed successfully!\n";
     return true;
 }
 
