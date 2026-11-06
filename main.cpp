@@ -11,17 +11,28 @@ using namespace std;
 
 bool file_preflight(bool& file_io, const filesystem::path& file_path);
 bool input_preflight(string& color_input, int& format_base);
-bool rgb_validator(string color_input, int& red, int& green, int& blue);
 string hex_to_dec(string color_input);
+bool rgb_validator(string color_input, int& red, int& green, int& blue);
 double contrast_calculator(int rgb_colors[2][3]);
 void rgb_to_srgb(const int rgb_colors[2][3], double (&srgb_colors)[2][4]);
 void output_report (bool file_io, const int rgb_colors[2][3], double contrast_score);
 
-constexpr double WCAG_AAA = 7.0;
-constexpr double WCAG_AA = 4.5;
+const filesystem::path DEFAULT_FILE_PATH ("../colors.txt");
 constexpr int BASE_DEC = 10;
 constexpr int BASE_HEX = 16;
-const filesystem::path DEFAULT_FILE_PATH ("../colors.txt");
+constexpr double WCAG_AAA = 7.0;
+constexpr double WCAG_AA = 4.5;
+
+/*
+static struct {
+    double lvl_AAA = 7.0;
+    double lvl_AA = 4.5;
+    double r_lum = 0.2126;
+    double g_lum = 0.7152;
+    double b_lum = 0.0722;
+    double piecewise_threshold = 0.03928;
+    double accurate_threshold = 0.04045;
+} WCAG; */
 
 int main() {
     // Two-dimensional array that can store 2 rows of 3 columns containing RGB color values
@@ -172,7 +183,6 @@ bool file_preflight(bool& file_io, const filesystem::path& file_path) {
     }
 }
 
-
 bool input_preflight(string& color_input, int& format_base) {
 
     // remove leading spaces
@@ -306,6 +316,12 @@ bool rgb_validator(const string color_input, int& red, int& green, int& blue) {
         return false;
     }
 
+    /* newer version that I haven't tested extensively yet.
+    rgb >> r >> g >> b >> ws;
+    if (!rgb.eof()) {
+        return false;
+    } */
+
     // Reject values outside 0-255
     if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
         // cout << "[DEBUG] RGB range checks failed!\nReason: At least 1 integer value(s) were outside the 0-255 range.\n";
@@ -326,7 +342,7 @@ bool rgb_validator(const string color_input, int& red, int& green, int& blue) {
     return true;
 }
 
-// See WCAG 2.x for source
+// Source: https://www.w3.org/WAI/GL/wiki/Relative_luminance, https://adamjberkowitz.com/blog/post/how-to-calculate-color-contrast
 double contrast_calculator(int rgb_colors[2][3]) {
 
     double srgb_colors[2][4] = {0};
@@ -335,20 +351,21 @@ double contrast_calculator(int rgb_colors[2][3]) {
     // Calculates relative luminance for each color
     for (int i = 0; i < 2; i++) {
         srgb_colors[i][3] = (srgb_colors[i][0] * 0.2126) + (srgb_colors[i][1] * 0.7152) + (srgb_colors[i][2] * 0.0722);
+        //srgb_colors[i][3] = (srgb_colors[i][0] * WCAG.r_lum) + (srgb_colors[i][1] * WCAG.g_lum) + (srgb_colors[i][2] * WCAG.b_lum);
     }
 
     double color_contrast = (max(srgb_colors[0][3], srgb_colors[1][3]) + 0.05) / (min(srgb_colors[0][3], srgb_colors[1][3]) + 0.05);
     return color_contrast;
 }
 
-// See WCAG 2.x for source
+// Source: https://www.w3.org/WAI/GL/wiki/Relative_luminance, https://adamjberkowitz.com/blog/post/how-to-calculate-color-contrast
 void rgb_to_srgb(const int rgb_colors[2][3], double (&srgb_colors)[2][4]) {
     // i = the individual color entered by the user --> Color 1 or Color 2
     // j = the channel of the individual color, i --> Red (0), Green (1), or Blue (2)
     for (int i = 0; i < 2; i++) {
         for (int j = 0; j < 3; j++) {
             double k = rgb_colors[i][j] / 255.0;
-            if (k <= 0.03928) {
+            if (k <= 0.03928) { // piecewise equation threshold is technically 0.04045?
                 srgb_colors[i][j] = k / 12.92;
             } else {
                 srgb_colors[i][j] = pow(((k + 0.055) / 1.055), 2.4);
@@ -356,6 +373,18 @@ void rgb_to_srgb(const int rgb_colors[2][3], double (&srgb_colors)[2][4]) {
         }
     }
 }
+
+/* source: https://stackoverflow.com/a/56678483
+void luminance_to_lightness(double (&srgb_colors)[2][4]) {
+    for (int_i = 0; i < 2; i++) { // '_' added to stop CLion from being stupid
+        double l = srgb_colors[i][3];
+        if (l <= (216.0/24389.0)) {
+            srgb_colors[i][3] = l * (24389.0/27.0);
+        } else {
+            srgb_colors[i][3] = pow(l, (1/3)) * 116 - 16;
+        }
+    }
+} */
 
 void output_report (const bool file_io, const int rgb_colors[2][3], double contrast_score) {
     filesystem::path report_path("../report.txt");
